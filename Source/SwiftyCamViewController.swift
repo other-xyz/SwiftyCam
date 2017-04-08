@@ -496,11 +496,10 @@ open class SwiftyCamViewController: UIViewController {
             }
         }
         
-        // Set background audio preference
-        
-        setBackgroundAudioPreference()
-        
         sessionQueue.async {
+
+            self.setBackgroundAudioPreference()
+
             switch self.setupResult {
             case .success:
                 // Begin Session
@@ -911,17 +910,17 @@ open class SwiftyCamViewController: UIViewController {
 			return
 		}
 
-		do{
-			try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayAndRecord,
-			                                                with: [.duckOthers, .defaultToSpeaker])
-
-			session.automaticallyConfiguresApplicationAudioSession = false
-		}
-		catch {
-			print("[SwiftyCam]: Failed to set background audio preference")
-
-		}
-	}
+        do{
+            try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayAndRecord,
+                                                            with: [.duckOthers, .defaultToSpeaker])
+            
+            self.session.automaticallyConfiguresApplicationAudioSession = false
+        }
+        catch {
+            print("[SwiftyCam]: Failed to set background audio preference")
+            
+        }
+    }
 }
 
 extension SwiftyCamViewController : SwiftyCamButtonDelegate {
