@@ -167,6 +167,14 @@ open class SwiftyCamViewController: UIViewController {
 	fileprivate let sessionQueue                 = DispatchQueue(label: "session queue", attributes: [])
 
 	// MARK: Private Variable Declarations
+    
+    /// The last request made was to start the camera - inactive if either suspended or stopped
+
+    fileprivate var shouldBeActive = false
+
+    /// The last date at which the camera was scheduled to stop post suspension
+    
+    fileprivate var suspendUntil: Date = Date()
 
 	/// Variable for storing current zoom scale
 
@@ -269,84 +277,18 @@ open class SwiftyCamViewController: UIViewController {
 		}
 	}
 
-	// MARK: ViewDidAppear
-
-	/// ViewDidAppear(_ animated:) Implementation
-
-
 	override open func viewDidAppear(_ animated: Bool) {
 		super.viewDidAppear(animated)
-
-		// Subscribe to device rotation notifications
-        if shouldUseDeviceOrientation {
-            coreMotionManager.startAccelerometerUpdates(to: OperationQueue()) { (data, error) in
-                guard let data = data else {
-                    return
-                }
-                DispatchQueue.main.async { [weak self] in
-                    if(abs(data.acceleration.y) < abs(data.acceleration.x)){
-                        if(data.acceleration.x > 0){
-                            self?.deviceOrientation = UIDeviceOrientation.landscapeRight
-                        } else {
-                            self?.deviceOrientation = UIDeviceOrientation.landscapeLeft
-                        }
-                    } else{
-                        if(data.acceleration.y > 0){
-                            self?.deviceOrientation = UIDeviceOrientation.portraitUpsideDown
-                        } else {
-                            self?.deviceOrientation = UIDeviceOrientation.portrait
-                        }
-                    }
-                }
-            }
-        }
-
-		// Set background audio preference
-
-		setBackgroundAudioPreference()
-
-		sessionQueue.async {
-			switch self.setupResult {
-			case .success:
-				// Begin Session
-				self.session.startRunning()
-				self.isSessionRunning = self.session.isRunning
-			case .notAuthorized:
-				// Prompt to App Settings
-				self.promptToAppSettings()
-			case .configurationFailed:
-				// Unknown Error
-				DispatchQueue.main.async(execute: { [unowned self] in
-					let message = NSLocalizedString("Unable to capture media", comment: "Alert message when something goes wrong during capture session configuration")
-					let alertController = UIAlertController(title: "AVCam", message: message, preferredStyle: .alert)
-					alertController.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Alert OK button"), style: .cancel, handler: nil))
-					self.present(alertController, animated: true, completion: nil)
-				})
-			}
-		}
 	}
 
-	// MARK: ViewDidDisappear
-
-	/// ViewDidDisappear(_ animated:) Implementation
-
-
+    override open func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        start()
+    }
+    
 	override open func viewDidDisappear(_ animated: Bool) {
 		super.viewDidDisappear(animated)
-
-		// If session is running, stop the session
-		if self.isSessionRunning == true {
-			self.session.stopRunning()
-			self.isSessionRunning = false
-		}
-
-		//Disble flash if it is currently enabled
-		disableFlash()
-
-		// Unsubscribe from device rotation notifications
-		if shouldUseDeviceOrientation {
-            coreMotionManager.stopAccelerometerUpdates()
-		}
+        suspend()
 	}
 
 	// MARK: Public Functions
@@ -525,6 +467,90 @@ open class SwiftyCamViewController: UIViewController {
 	}
 
 	// MARK: Private Functions
+    
+    fileprivate func start() {
+    
+        shouldBeActive = true
+        
+        // Subscribe to device rotation notifications
+        if shouldUseDeviceOrientation {
+            coreMotionManager.startAccelerometerUpdates(to: OperationQueue()) { (data, error) in
+                
+                guard let data = data else { return }
+                DispatchQueue.main.async { [weak self] in
+                    
+                    if(abs(data.acceleration.y) < abs(data.acceleration.x)){
+                        if(data.acceleration.x > 0){
+                            self?.deviceOrientation = UIDeviceOrientation.landscapeRight
+                        } else {
+                            self?.deviceOrientation = UIDeviceOrientation.landscapeLeft
+                        }
+                    } else{
+                        if(data.acceleration.y > 0){
+                            self?.deviceOrientation = UIDeviceOrientation.portraitUpsideDown
+                        } else {
+                            self?.deviceOrientation = UIDeviceOrientation.portrait
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Set background audio preference
+        
+        setBackgroundAudioPreference()
+        
+        sessionQueue.async {
+            switch self.setupResult {
+            case .success:
+                // Begin Session
+                self.session.startRunning()
+                self.isSessionRunning = self.session.isRunning
+            case .notAuthorized:
+                // Prompt to App Settings
+                self.promptToAppSettings()
+            case .configurationFailed:
+                // Unknown Error
+                DispatchQueue.main.async(execute: { [unowned self] in
+                    let message = NSLocalizedString("Unable to capture media", comment: "Alert message when something goes wrong during capture session configuration")
+                    let alertController = UIAlertController(title: "AVCam", message: message, preferredStyle: .alert)
+                    alertController.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Alert OK button"), style: .cancel, handler: nil))
+                    self.present(alertController, animated: true, completion: nil)
+                })
+            }
+        }
+    }
+    
+    fileprivate func suspend(withTimeout timeout: Int = 5) {
+        
+        shouldBeActive = false
+
+        suspendUntil = Date().addingTimeInterval(TimeInterval(timeout))
+        
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + .seconds(timeout)) {
+            guard !self.shouldBeActive && self.suspendUntil <= Date() else { return }
+            self.stop()
+        }
+    }
+    
+    fileprivate func stop() {
+
+        shouldBeActive = false
+
+        // If session is running, stop the session
+        if self.isSessionRunning == true {
+            self.session.stopRunning()
+            self.isSessionRunning = false
+        }
+        
+        //Disble flash if it is currently enabled
+        disableFlash()
+        
+        // Unsubscribe from device rotation notifications
+        if shouldUseDeviceOrientation {
+            coreMotionManager.stopAccelerometerUpdates()
+        }
+    }
 
 	/// Configure session, add inputs and outputs
 
