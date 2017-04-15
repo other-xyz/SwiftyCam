@@ -240,7 +240,7 @@ open class SwiftyCamViewController: UIViewController {
 	override open func viewDidLoad() {
 		super.viewDidLoad()
         coreMotionManager = CMMotionManager()
-        coreMotionManager.accelerometerUpdateInterval = 0.1
+        coreMotionManager.accelerometerUpdateInterval = 0.25
 		previewLayer = PreviewView(frame: self.view.frame)
 
 		// Add Gesture Recognizers
@@ -474,24 +474,29 @@ open class SwiftyCamViewController: UIViewController {
         
         // Subscribe to device rotation notifications
         if shouldUseDeviceOrientation {
-            coreMotionManager.startAccelerometerUpdates(to: OperationQueue()) { (data, error) in
+            coreMotionManager.startAccelerometerUpdates(to: OperationQueue()) { [weak self] (data, error) in
                 
                 guard let data = data else { return }
-                DispatchQueue.main.async { [weak self] in
+
+                let deviceOrientation: UIDeviceOrientation = {
                     
                     if(abs(data.acceleration.y) < abs(data.acceleration.x)){
                         if(data.acceleration.x > 0){
-                            self?.deviceOrientation = UIDeviceOrientation.landscapeRight
+                            return UIDeviceOrientation.landscapeRight
                         } else {
-                            self?.deviceOrientation = UIDeviceOrientation.landscapeLeft
+                            return UIDeviceOrientation.landscapeLeft
                         }
                     } else{
                         if(data.acceleration.y > 0){
-                            self?.deviceOrientation = UIDeviceOrientation.portraitUpsideDown
+                            return UIDeviceOrientation.portraitUpsideDown
                         } else {
-                            self?.deviceOrientation = UIDeviceOrientation.portrait
+                            return UIDeviceOrientation.portrait
                         }
                     }
+                }()
+
+                self?.sessionQueue.async {
+                    self?.deviceOrientation = deviceOrientation
                 }
             }
         }
