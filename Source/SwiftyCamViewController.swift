@@ -125,9 +125,13 @@ open class SwiftyCamViewController: UIViewController {
 
 	public var lowLightBoost                     = true
 
-	/// Set whether SwiftyCam should allow background audio from other applications
+	/// Set whether SwiftyCam should allow background audio from other applications if audio capture is permitted
 
 	public var allowBackgroundAudio              = true
+
+    /// Set whether SwiftyCam should capture audio
+    
+    public var audioEnabled                      = true
 
 	/// Sets whether a double tap to switch cameras is supported
 
@@ -665,6 +669,8 @@ open class SwiftyCamViewController: UIViewController {
 	/// Add Audio Inputs
 
 	fileprivate func addAudioInput() {
+        guard audioEnabled else { return }
+        
 		do {
 			let audioDevice = AVCaptureDevice.defaultDevice(withMediaType: AVMediaTypeAudio)
 			let audioDeviceInput = try AVCaptureDeviceInput(device: audioDevice)
@@ -918,7 +924,7 @@ open class SwiftyCamViewController: UIViewController {
 	/// Sets whether SwiftyCam should enable background audio from other applications or sources
 
 	fileprivate func setBackgroundAudioPreference() {
-		guard allowBackgroundAudio == true else {
+		guard allowBackgroundAudio && audioEnabled else {
 			return
 		}
 
