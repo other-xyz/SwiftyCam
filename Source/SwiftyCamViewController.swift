@@ -363,6 +363,12 @@ open class SwiftyCamViewController: UIViewController {
 
 		sessionQueue.async { [unowned self] in
             
+            self.setBackgroundAudioPreference()
+            
+            self.session.beginConfiguration()
+            self.addAudioInput()
+            self.session.commitConfiguration()
+
 			if !movieFileOutput.isRecording {
 				if UIDevice.current.isMultitaskingSupported {
 					self.backgroundRecordingID = UIApplication.shared.beginBackgroundTask(expirationHandler: nil)
@@ -504,8 +510,6 @@ open class SwiftyCamViewController: UIViewController {
         
         sessionQueue.async {
 
-            self.setBackgroundAudioPreference()
-
             switch self.setupResult {
             case .success:
                 // Begin Session
@@ -568,10 +572,8 @@ open class SwiftyCamViewController: UIViewController {
 		session.beginConfiguration()
 		configureVideoPreset()
 		addVideoInput()
-		addAudioInput()
 		configureVideoOutput()
 		configurePhotoOutput()
-
 		session.commitConfiguration()
 	}
 
@@ -581,7 +583,6 @@ open class SwiftyCamViewController: UIViewController {
 		session.beginConfiguration()
 		configureVideoPreset()
 		addVideoInput()
-		addAudioInput()
 		session.commitConfiguration()
 	}
 
@@ -679,6 +680,16 @@ open class SwiftyCamViewController: UIViewController {
 			print("[SwiftyCam]: Could not create audio device input: \(error)")
 		}
 	}
+
+    fileprivate func removeAudioInput() {
+
+        guard let audioInput = session.inputs.filter({
+            guard let input = $0 as? AVCaptureDeviceInput else { return false }
+            return input.device != self.videoDevice
+        }).first as? AVCaptureDeviceInput else { return }
+
+        session.removeInput(audioInput)        
+    }
 
 	/// Configure Movie Output
 
@@ -965,7 +976,17 @@ extension SwiftyCamViewController : AVCaptureFileOutputRecordingDelegate {
 	/// Process newly captured video and write it to temporary directory
 
 	public func capture(_ captureOutput: AVCaptureFileOutput!, didFinishRecordingToOutputFileAt outputFileURL: URL!, fromConnections connections: [Any]!, error: Error!) {
-		if let currentBackgroundRecordingID = backgroundRecordingID {
+		
+        defer {
+            
+            sessionQueue.async {
+                self.session.beginConfiguration()
+                self.removeAudioInput()
+                self.session.commitConfiguration()
+            }
+        }
+        
+        if let currentBackgroundRecordingID = backgroundRecordingID {
 			backgroundRecordingID = UIBackgroundTaskInvalid
 
 			if currentBackgroundRecordingID != UIBackgroundTaskInvalid {
