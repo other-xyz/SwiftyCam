@@ -248,7 +248,6 @@ open class SwiftyCamViewController: UIViewController {
 		addGestureRecognizersTo(view: previewLayer)
 
 		self.view.addSubview(previewLayer)
-		previewLayer.session = session
 
 		// Test authorization status for Camera and Micophone
 
@@ -273,6 +272,7 @@ open class SwiftyCamViewController: UIViewController {
 			setupResult = .notAuthorized
 		}
 		sessionQueue.async { [unowned self] in
+            self.previewLayer.session = self.session
 			self.configureSession()
 		}
 	}
@@ -362,6 +362,7 @@ open class SwiftyCamViewController: UIViewController {
 		}
 
 		sessionQueue.async { [unowned self] in
+            
 			if !movieFileOutput.isRecording {
 				if UIDevice.current.isMultitaskingSupported {
 					self.backgroundRecordingID = UIApplication.shared.beginBackgroundTask(expirationHandler: nil)
