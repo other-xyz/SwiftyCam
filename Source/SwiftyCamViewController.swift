@@ -367,12 +367,6 @@ open class SwiftyCamViewController: UIViewController {
 
 		sessionQueue.async { [unowned self] in
             
-            self.setBackgroundAudioPreference()
-            
-            self.session.beginConfiguration()
-            self.addAudioInput()
-            self.session.commitConfiguration()
-
 			if !movieFileOutput.isRecording {
 				if UIDevice.current.isMultitaskingSupported {
 					self.backgroundRecordingID = UIApplication.shared.beginBackgroundTask(expirationHandler: nil)
@@ -513,6 +507,11 @@ open class SwiftyCamViewController: UIViewController {
         }
         
         sessionQueue.async {
+            
+            self.setBackgroundAudioPreference()
+            self.session.beginConfiguration()
+            self.addAudioInput()
+            self.session.commitConfiguration()
 
             switch self.setupResult {
             case .success:
@@ -532,7 +531,13 @@ open class SwiftyCamViewController: UIViewController {
     fileprivate func suspend(withTimeout timeout: Int = 5) {
         
         shouldBeActive = false
-
+        
+        sessionQueue.async {
+            self.session.beginConfiguration()
+            self.removeAudioInput()
+            self.session.commitConfiguration()
+        }
+        
         suspendUntil = Date().addingTimeInterval(TimeInterval(timeout))
         
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + .seconds(timeout)) {
@@ -982,15 +987,6 @@ extension SwiftyCamViewController : AVCaptureFileOutputRecordingDelegate {
 	/// Process newly captured video and write it to temporary directory
 
 	public func capture(_ captureOutput: AVCaptureFileOutput!, didFinishRecordingToOutputFileAt outputFileURL: URL!, fromConnections connections: [Any]!, error: Error!) {
-		
-        defer {
-            
-            sessionQueue.async {
-                self.session.beginConfiguration()
-                self.removeAudioInput()
-                self.session.commitConfiguration()
-            }
-        }
         
         if let currentBackgroundRecordingID = backgroundRecordingID {
 			backgroundRecordingID = UIBackgroundTaskInvalid
