@@ -113,9 +113,9 @@ open class SwiftyCamViewController: UIViewController {
 
 	/// Sets the maximum zoom scale allowed during Pinch gesture
 
-	public var maxZoomScale				         = CGFloat(4.0)
-  
-	/// Sets whether Tap to Focus and Tap to Adjust Exposure is enabled for the capture session
+    public var maxZoomScale                      = CGFloat.greatestFiniteMagnitude
+    
+    /// Sets whether Tap to Focus and Tap to Adjust Exposure is enabled for the capture session
 
 	public var tapToFocus                        = true
 
@@ -187,7 +187,7 @@ open class SwiftyCamViewController: UIViewController {
 	/// Variable for storing initial zoom scale before Pinch to Zoom begins
 
 	fileprivate var beginZoomScale               = CGFloat(1.0)
-
+    
 	/// Returns true if the torch (flash) is currently enabled
 
 	fileprivate var isCameraTorchOn              = false
@@ -227,6 +227,8 @@ open class SwiftyCamViewController: UIViewController {
 	/// Last changed orientation
 
 	fileprivate var deviceOrientation            : UIDeviceOrientation?
+    
+    /// Tracks device orientation
     
     fileprivate var coreMotionManager            : CMMotionManager!
 
@@ -479,39 +481,12 @@ open class SwiftyCamViewController: UIViewController {
         
         // Subscribe to device rotation notifications
         if shouldUseDeviceOrientation {
-            coreMotionManager.startAccelerometerUpdates(to: OperationQueue()) { [weak self] (data, error) in
-                
-                guard let data = data else { return }
-
-                let deviceOrientation: UIDeviceOrientation = {
-                    
-                    if(abs(data.acceleration.y) < abs(data.acceleration.x)){
-                        if(data.acceleration.x > 0){
-                            return UIDeviceOrientation.landscapeRight
-                        } else {
-                            return UIDeviceOrientation.landscapeLeft
-                        }
-                    } else{
-                        if(data.acceleration.y > 0){
-                            return UIDeviceOrientation.portraitUpsideDown
-                        } else {
-                            return UIDeviceOrientation.portrait
-                        }
-                    }
-                }()
-
-                self?.sessionQueue.async {
-                    self?.deviceOrientation = deviceOrientation
-                }
-            }
+            subscribeToDeviceOrientationChanges()
         }
         
         sessionQueue.async {
             
             self.setBackgroundAudioPreference()
-            self.session.beginConfiguration()
-            self.addAudioInput()
-            self.session.commitConfiguration()
 
             switch self.setupResult {
             case .success:
@@ -531,12 +506,6 @@ open class SwiftyCamViewController: UIViewController {
     fileprivate func suspend(withTimeout timeout: Int = 5) {
         
         shouldBeActive = false
-        
-        sessionQueue.async {
-            self.session.beginConfiguration()
-            self.removeAudioInput()
-            self.session.commitConfiguration()
-        }
         
         suspendUntil = Date().addingTimeInterval(TimeInterval(timeout))
         
@@ -561,7 +530,7 @@ open class SwiftyCamViewController: UIViewController {
         
         // Unsubscribe from device rotation notifications
         if shouldUseDeviceOrientation {
-            coreMotionManager.stopAccelerometerUpdates()
+            unsubscribeFromDeviceOrientationChanges()
         }
     }
 
@@ -581,6 +550,7 @@ open class SwiftyCamViewController: UIViewController {
 		session.beginConfiguration()
 		configureVideoPreset()
 		addVideoInput()
+        addAudioInput()
 		configureVideoOutput()
 		configurePhotoOutput()
 		session.commitConfiguration()
@@ -592,6 +562,7 @@ open class SwiftyCamViewController: UIViewController {
 		session.beginConfiguration()
 		configureVideoPreset()
 		addVideoInput()
+        addAudioInput()
 		session.commitConfiguration()
 	}
 
@@ -733,7 +704,39 @@ open class SwiftyCamViewController: UIViewController {
 
 	/// Orientation management
 
+    fileprivate func subscribeToDeviceOrientationChanges() {
 
+        coreMotionManager.startAccelerometerUpdates(to: OperationQueue()) { [weak self] (data, error) in
+            
+            guard let data = data else { return }
+            
+            let deviceOrientation: UIDeviceOrientation = {
+                
+                if(abs(data.acceleration.y) < abs(data.acceleration.x)){
+                    if(data.acceleration.x > 0){
+                        return UIDeviceOrientation.landscapeRight
+                    } else {
+                        return UIDeviceOrientation.landscapeLeft
+                    }
+                } else{
+                    if(data.acceleration.y > 0){
+                        return UIDeviceOrientation.portraitUpsideDown
+                    } else {
+                        return UIDeviceOrientation.portrait
+                    }
+                }
+            }()
+            
+            self?.sessionQueue.async {
+                self?.deviceOrientation = deviceOrientation
+            }
+        }
+    }
+    
+    fileprivate func unsubscribeFromDeviceOrientationChanges() {
+        coreMotionManager.stopAccelerometerUpdates()
+    }
+    
 	fileprivate func getVideoOrientation() -> AVCaptureVideoOrientation {
 		guard shouldUseDeviceOrientation, let deviceOrientation = self.deviceOrientation else { return previewLayer!.videoPreviewLayer.connection.videoOrientation }
 
@@ -1036,7 +1039,7 @@ extension SwiftyCamViewController {
 			print("[SwiftyCam]: Error locking configuration")
 		}
 	}
-
+    
 	/// Handle single tap gesture
 
 	@objc fileprivate func singleTapGesture(tap: UITapGestureRecognizer) {
