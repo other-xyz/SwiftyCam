@@ -472,6 +472,34 @@ open class SwiftyCamViewController: UIViewController {
 		// If flash is enabled, disable it as the torch is needed for front facing camera
 		disableFlash()
 	}
+    
+    /**
+ 
+    Reset zoom factor
+    
+     */
+    
+    public func resetZoomLevel() {
+        
+        do {
+            let captureDevice = AVCaptureDevice.devices().first as? AVCaptureDevice
+            try captureDevice?.lockForConfiguration()
+            
+            zoomScale = 1.0
+            
+            captureDevice?.videoZoomFactor = zoomScale
+            
+            // Call Delegate function with current zoom scale
+            DispatchQueue.main.async {
+                self.cameraDelegate?.swiftyCam(self, didChangeZoomLevel: self.zoomScale)
+            }
+            
+            captureDevice?.unlockForConfiguration()
+            
+        } catch {
+            print("[SwiftyCam]: Error locking configuration")
+        }
+    }
 
 	// MARK: Private Functions
     
