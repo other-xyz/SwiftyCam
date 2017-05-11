@@ -246,7 +246,7 @@ open class SwiftyCamViewController: UIViewController {
 	override open func viewDidLoad() {
 		super.viewDidLoad()
         coreMotionManager = CMMotionManager()
-        coreMotionManager.accelerometerUpdateInterval = 0.25
+        coreMotionManager.accelerometerUpdateInterval = 0.1
 		previewLayer = PreviewView(frame: self.view.frame)
 
 		// Add Gesture Recognizers
@@ -736,7 +736,7 @@ open class SwiftyCamViewController: UIViewController {
 
         coreMotionManager.startAccelerometerUpdates(to: OperationQueue()) { [weak self] (data, error) in
             
-            guard let data = data else { return }
+            guard let data = data, let sself = self else { return }
             
             let deviceOrientation: UIDeviceOrientation = {
                 
@@ -755,8 +755,8 @@ open class SwiftyCamViewController: UIViewController {
                 }
             }()
             
-            self?.sessionQueue.async {
-                self?.deviceOrientation = deviceOrientation
+            sself.sessionQueue.async {
+                sself.deviceOrientation = deviceOrientation
             }
         }
     }
