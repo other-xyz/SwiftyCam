@@ -223,6 +223,23 @@ open class SwiftyCamViewController: UIViewController {
 	/// UIView for front facing flash
 
 	fileprivate var flashView                    : UIView?
+    
+    /// Blurs preview when camera is suspended
+    
+    fileprivate let previewBlur: UIVisualEffectView = {
+        let blurEffect = UIBlurEffect(style: .dark)
+        let effectView = UIVisualEffectView(effect: blurEffect)
+        let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
+        let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
+        effectView.contentView.addSubview(vibrancyEffectView)
+        vibrancyEffectView.topAnchor.constraint(equalTo: vibrancyEffectView.topAnchor).isActive = true
+        vibrancyEffectView.leftAnchor.constraint(equalTo: vibrancyEffectView.leftAnchor).isActive = true
+        vibrancyEffectView.rightAnchor.constraint(equalTo: vibrancyEffectView.rightAnchor).isActive = true
+        vibrancyEffectView.bottomAnchor.constraint(equalTo: vibrancyEffectView.bottomAnchor).isActive = true
+        effectView.translatesAutoresizingMaskIntoConstraints = false
+        effectView.alpha = 0.8
+        return effectView
+    }()
 
 	/// Last changed orientation
 
@@ -254,6 +271,12 @@ open class SwiftyCamViewController: UIViewController {
 		addGestureRecognizersTo(view: previewLayer)
 
 		self.view.addSubview(previewLayer)
+        self.view.addSubview(previewBlur)
+        
+        previewBlur.topAnchor.constraint(equalTo: view.topAnchor).isActive = true
+        previewBlur.leftAnchor.constraint(equalTo: view.leftAnchor).isActive = true
+        previewBlur.rightAnchor.constraint(equalTo: view.rightAnchor).isActive = true
+        previewBlur.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
 
 		// Test authorization status for Camera and Micophone
 
@@ -507,6 +530,10 @@ open class SwiftyCamViewController: UIViewController {
     
         shouldBeActive = true
         
+        UIView.animate(withDuration: 0.2) { 
+            self.previewBlur.alpha = 0.0
+        }
+        
         // Subscribe to device rotation notifications
         if shouldUseDeviceOrientation {
             subscribeToDeviceOrientationChanges()
@@ -546,6 +573,10 @@ open class SwiftyCamViewController: UIViewController {
     fileprivate func stop() {
 
         shouldBeActive = false
+
+        UIView.animate(withDuration: 0.2) {
+            self.previewBlur.alpha = 1
+        }
 
         // If session is running, stop the session
         if self.isSessionRunning == true {

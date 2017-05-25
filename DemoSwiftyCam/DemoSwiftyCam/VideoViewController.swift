@@ -63,6 +63,7 @@ class VideoViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         player?.play()
+//        player?.rate
     }
     
     func cancel() {
