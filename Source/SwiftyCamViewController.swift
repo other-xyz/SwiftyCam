@@ -237,7 +237,7 @@ open class SwiftyCamViewController: UIViewController {
         vibrancyEffectView.rightAnchor.constraint(equalTo: vibrancyEffectView.rightAnchor).isActive = true
         vibrancyEffectView.bottomAnchor.constraint(equalTo: vibrancyEffectView.bottomAnchor).isActive = true
         effectView.translatesAutoresizingMaskIntoConstraints = false
-        effectView.alpha = 0.8
+        effectView.alpha = 0.9
         return effectView
     }()
 
