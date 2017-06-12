@@ -375,9 +375,11 @@ open class SwiftyCamViewController: UIViewController {
 	*/
 
 	public func startVideoRecording() {
-		guard let movieFileOutput = self.movieFileOutput else {
-			return
-		}
+		guard let movieFileOutput = self.movieFileOutput else { return }
+        
+        guard !isVideoRecording else { return }
+        
+        isVideoRecording = true
 
 		if currentCamera == .rear && flashEnabled == true {
 			enableFlash()
@@ -412,7 +414,6 @@ open class SwiftyCamViewController: UIViewController {
 				let outputFileName = UUID().uuidString
 				let outputFilePath = (NSTemporaryDirectory() as NSString).appendingPathComponent((outputFileName as NSString).appendingPathExtension("mov")!)
 				movieFileOutput.startRecording(toOutputFileURL: URL(fileURLWithPath: outputFilePath), recordingDelegate: self)
-				self.isVideoRecording = true
 				DispatchQueue.main.async {
 					self.cameraDelegate?.swiftyCam(self, didBeginRecordingVideo: self.currentCamera)
 				}
@@ -434,23 +435,23 @@ open class SwiftyCamViewController: UIViewController {
 	*/
 
 	public func stopVideoRecording() {
-		if self.isVideoRecording {
-			self.isVideoRecording = false
-            movieFileOutput!.stopRecording()
-			disableFlash()
-
-			if currentCamera == .front && flashEnabled == true && flashView != nil {
-				UIView.animate(withDuration: 0.1, delay: 0.0, options: .curveEaseInOut, animations: {
-					self.flashView?.alpha = 0.0
-				}, completion: { (_) in
-					self.flashView?.removeFromSuperview()
-				})
-			}
-			DispatchQueue.main.async {
-				self.cameraDelegate?.swiftyCam(self, didFinishRecordingVideo: self.currentCamera)
-			}
-		}
-	}
+        
+        guard isVideoRecording else { return }
+        
+        movieFileOutput!.stopRecording()
+        disableFlash()
+        
+        if self.currentCamera == .front && self.flashEnabled && self.flashView != nil {
+            UIView.animate(withDuration: 0.1, delay: 0.0, options: .curveEaseInOut, animations: {
+                self.flashView?.alpha = 0.0
+            }, completion: { (_) in
+                self.flashView?.removeFromSuperview()
+            })
+        }
+        
+        self.cameraDelegate?.swiftyCam(self, didFinishRecordingVideo: self.currentCamera)
+        self.isVideoRecording = false
+    }
 
 	/**
 
