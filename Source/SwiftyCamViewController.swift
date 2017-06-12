@@ -227,7 +227,7 @@ open class SwiftyCamViewController: UIViewController {
     /// Blurs preview when camera is suspended
     
     fileprivate let previewBlur: UIVisualEffectView = {
-        let blurEffect = UIBlurEffect(style: .dark)
+        let blurEffect = UIBlurEffect(style: .regular)
         let effectView = UIVisualEffectView(effect: blurEffect)
         let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
         let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
@@ -463,6 +463,7 @@ open class SwiftyCamViewController: UIViewController {
 
 
 	public func switchCamera() {
+        
 		guard isVideoRecording != true else {
 			//TODO: Look into switching camera during video recording
 			print("[SwiftyCam]: Switching between cameras while recording video is not supported")
@@ -532,7 +533,7 @@ open class SwiftyCamViewController: UIViewController {
         shouldBeActive = true
         
         UIView.animate(withDuration: 0.2) { 
-            self.previewBlur.alpha = 0.0
+            self.previewBlur.effect = nil
         }
         
         // Subscribe to device rotation notifications
@@ -576,7 +577,8 @@ open class SwiftyCamViewController: UIViewController {
         shouldBeActive = false
 
         UIView.animate(withDuration: 0.2) {
-            self.previewBlur.alpha = 1
+            self.previewBlur.effect = UIBlurEffect(style: .regular)
+
         }
 
         // If session is running, stop the session
@@ -953,7 +955,7 @@ open class SwiftyCamViewController: UIViewController {
 	/// Disable flash
 
 	fileprivate func disableFlash() {
-		if self.isCameraTorchOn == true {
+		if self.isCameraTorchOn {
 			toggleFlash()
 		}
 	}
