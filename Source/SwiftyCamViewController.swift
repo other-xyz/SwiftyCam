@@ -567,7 +567,7 @@ open class SwiftyCamViewController: UIViewController {
         
         suspendUntil = Date().addingTimeInterval(TimeInterval(timeout))
         
-        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + .seconds(timeout)) {
+        sessionQueue.asyncAfter(deadline: DispatchTime.now() + .seconds(timeout)) {
             guard !self.shouldBeActive && self.suspendUntil <= Date() else { return }
             self.stop()
         }
