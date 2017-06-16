@@ -532,10 +532,12 @@ open class SwiftyCamViewController: UIViewController {
     fileprivate func start() {
     
         shouldBeActive = true
-        
-        UIView.animate(withDuration: 0.2) { 
+
+        // FIXME: Instead of delaying should actually respond to when the camera
+        // session starts
+        UIView.animate(withDuration: 0.2, delay: 0.5, options: [], animations: { 
             self.previewBlur.effect = nil
-        }
+        }, completion: nil)
         
         // Subscribe to device rotation notifications
         if shouldUseDeviceOrientation {
