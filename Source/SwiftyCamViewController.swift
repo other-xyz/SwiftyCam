@@ -229,15 +229,8 @@ open class SwiftyCamViewController: UIViewController {
     fileprivate let previewBlur: UIVisualEffectView = {
         let blurEffect = UIBlurEffect(style: .regular)
         let effectView = UIVisualEffectView(effect: blurEffect)
-        let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
-        let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
-        effectView.contentView.addSubview(vibrancyEffectView)
-        vibrancyEffectView.topAnchor.constraint(equalTo: vibrancyEffectView.topAnchor).isActive = true
-        vibrancyEffectView.leftAnchor.constraint(equalTo: vibrancyEffectView.leftAnchor).isActive = true
-        vibrancyEffectView.rightAnchor.constraint(equalTo: vibrancyEffectView.rightAnchor).isActive = true
-        vibrancyEffectView.bottomAnchor.constraint(equalTo: vibrancyEffectView.bottomAnchor).isActive = true
         effectView.translatesAutoresizingMaskIntoConstraints = false
-        effectView.alpha = 0.9
+        effectView.isUserInteractionEnabled = false
         return effectView
     }()
 
@@ -535,7 +528,7 @@ open class SwiftyCamViewController: UIViewController {
 
         // FIXME: Instead of delaying should actually respond to when the camera
         // session starts
-        UIView.animate(withDuration: 0.2, delay: 0.5, options: [], animations: { 
+        UIView.animate(withDuration: 0.3, delay: 0.5, options: [], animations: {
             self.previewBlur.effect = nil
         }, completion: nil)
         
