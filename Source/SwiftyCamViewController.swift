@@ -139,12 +139,15 @@ open class SwiftyCamViewController: UIViewController {
 
 	/// Set default launch camera
 
-	public var defaultCamera                   = CameraSelection.rear
+	public var defaultCamera                    = CameraSelection.rear
 
 	/// Sets wether the taken photo or video should be oriented according to the device orientation
 
-	public var shouldUseDeviceOrientation      = false
+	public var shouldUseDeviceOrientation       = false
 
+    /// Sets wether the initial frame is blurred when the camera is (re)launched
+    
+    public var shouldUseBlurEffect              = false
 
 	// MARK: Public Get-only Variable Declarations
 
@@ -226,7 +229,7 @@ open class SwiftyCamViewController: UIViewController {
     
     /// Blurs preview when camera is suspended
     
-    fileprivate let previewBlur: UIVisualEffectView = {
+    fileprivate lazy var previewBlur: UIVisualEffectView = {
         let blurEffect = UIBlurEffect(style: .regular)
         let effectView = UIVisualEffectView(effect: blurEffect)
         effectView.translatesAutoresizingMaskIntoConstraints = false
@@ -263,13 +266,16 @@ open class SwiftyCamViewController: UIViewController {
 
 		addGestureRecognizersTo(view: previewLayer)
 
-		self.view.addSubview(previewLayer)
-        self.view.addSubview(previewBlur)
+		view.addSubview(previewLayer)
         
-        previewBlur.topAnchor.constraint(equalTo: view.topAnchor).isActive = true
-        previewBlur.leftAnchor.constraint(equalTo: view.leftAnchor).isActive = true
-        previewBlur.rightAnchor.constraint(equalTo: view.rightAnchor).isActive = true
-        previewBlur.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
+        if shouldUseBlurEffect {
+            view.addSubview(previewBlur)
+            
+            previewBlur.topAnchor.constraint(equalTo: view.topAnchor).isActive = true
+            previewBlur.leftAnchor.constraint(equalTo: view.leftAnchor).isActive = true
+            previewBlur.rightAnchor.constraint(equalTo: view.rightAnchor).isActive = true
+            previewBlur.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
+        }
 
 		// Test authorization status for Camera and Micophone
 
@@ -526,11 +532,13 @@ open class SwiftyCamViewController: UIViewController {
     
         shouldBeActive = true
 
-        // FIXME: Instead of delaying should actually respond to when the camera
-        // session starts
-        UIView.animate(withDuration: 0.3, delay: 0.5, options: [], animations: {
-            self.previewBlur.effect = nil
-        }, completion: nil)
+        if shouldUseBlurEffect {
+            // FIXME: Instead of delaying should actually respond to when the camera
+            // session starts
+            UIView.animate(withDuration: 0.2, delay: 0.3, options: [], animations: {
+                self.previewBlur.effect = nil
+            }, completion: nil)
+        }
         
         // Subscribe to device rotation notifications
         if shouldUseDeviceOrientation {
@@ -572,15 +580,16 @@ open class SwiftyCamViewController: UIViewController {
 
         shouldBeActive = false
 
-        UIView.animate(withDuration: 0.2) {
-            self.previewBlur.effect = UIBlurEffect(style: .regular)
-
+        if shouldUseBlurEffect {
+            UIView.animate(withDuration: 0.2) {
+                self.previewBlur.effect = UIBlurEffect(style: .regular)
+            }
         }
 
         // If session is running, stop the session
-        if self.isSessionRunning == true {
-            self.session.stopRunning()
-            self.isSessionRunning = false
+        if isSessionRunning == true {
+            session.stopRunning()
+            isSessionRunning = false
         }
         
         //Disble flash if it is currently enabled
