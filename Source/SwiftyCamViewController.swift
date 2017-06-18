@@ -147,7 +147,12 @@ open class SwiftyCamViewController: UIViewController {
 
     /// Sets wether the initial frame is blurred when the camera is (re)launched
     
-    public var shouldUseBlurEffect              = false
+    public var shouldUseBlurEffect              = false {
+        didSet {
+            guard shouldUseBlurEffect else { return }
+            DispatchQueue.main.async { self.addBlurView() }
+        }
+    }
 
 	// MARK: Public Get-only Variable Declarations
 
@@ -269,12 +274,7 @@ open class SwiftyCamViewController: UIViewController {
 		view.addSubview(previewLayer)
         
         if shouldUseBlurEffect {
-            view.addSubview(previewBlur)
-            
-            previewBlur.topAnchor.constraint(equalTo: view.topAnchor).isActive = true
-            previewBlur.leftAnchor.constraint(equalTo: view.leftAnchor).isActive = true
-            previewBlur.rightAnchor.constraint(equalTo: view.rightAnchor).isActive = true
-            previewBlur.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
+            addBlurView()
         }
 
 		// Test authorization status for Camera and Micophone
@@ -318,6 +318,15 @@ open class SwiftyCamViewController: UIViewController {
 		super.viewDidDisappear(animated)
         suspend()
 	}
+    
+    fileprivate func addBlurView() {
+        guard isViewLoaded, previewBlur.superview == nil else { return }
+        view.addSubview(previewBlur)
+        previewBlur.topAnchor.constraint(equalTo: view.topAnchor).isActive = true
+        previewBlur.leftAnchor.constraint(equalTo: view.leftAnchor).isActive = true
+        previewBlur.rightAnchor.constraint(equalTo: view.rightAnchor).isActive = true
+        previewBlur.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
+    }
 
 	// MARK: Public Functions
 
