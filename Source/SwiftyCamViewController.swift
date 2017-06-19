@@ -544,7 +544,7 @@ open class SwiftyCamViewController: UIViewController {
         if shouldUseBlurEffect {
             // FIXME: Instead of delaying should actually respond to when the camera
             // session starts
-            UIView.animate(withDuration: 0.2, delay: 0.3, options: [], animations: {
+            UIView.animate(withDuration: 0.3, delay: 0.5, options: [], animations: {
                 self.previewBlur.effect = nil
             }, completion: nil)
         }
