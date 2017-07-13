@@ -125,7 +125,11 @@ open class SwiftyCamViewController: UIViewController {
 
 	public var lowLightBoost                     = true
 
-	/// Set whether SwiftyCam should allow background audio from other applications if audio capture is permitted
+    /// Specifies the [videoGravity](https://developer.apple.com/reference/avfoundation/avcapturevideopreviewlayer/1386708-videogravity) for the preview layer.
+
+    public var videoGravity: PreviewVideoGravity = .resizeAspect
+
+    /// Set whether SwiftyCam should allow background audio from other applications if audio capture is permitted
 
 	public var allowBackgroundAudio              = true
 
@@ -265,7 +269,11 @@ open class SwiftyCamViewController: UIViewController {
 		super.viewDidLoad()
         coreMotionManager = CMMotionManager()
         coreMotionManager.accelerometerUpdateInterval = 0.1
-		previewLayer = PreviewView(frame: self.view.frame)
+        previewLayer = PreviewView(frame: .zero, videoGravity: videoGravity)
+        previewLayer.topAnchor.constraint(equalTo: view.topAnchor).isActive = true
+        previewLayer.leftAnchor.constraint(equalTo: view.leftAnchor).isActive = true
+        previewLayer.rightAnchor.constraint(equalTo: view.rightAnchor).isActive = true
+        previewLayer.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
 
 		// Add Gesture Recognizers
 
