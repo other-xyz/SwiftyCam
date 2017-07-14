@@ -125,7 +125,14 @@ open class SwiftyCamViewController: UIViewController {
 
 	public var lowLightBoost                     = true
 
-	/// Set whether SwiftyCam should allow background audio from other applications if audio capture is permitted
+    /// Set whether to start by default on viewWillAppear
+    public var automaticallyStartsPreview        = true
+
+    /// Specifies the [videoGravity](https://developer.apple.com/reference/avfoundation/avcapturevideopreviewlayer/1386708-videogravity) for the preview layer.
+
+    public var videoGravity: PreviewVideoGravity = .resizeAspect
+
+    /// Set whether SwiftyCam should allow background audio from other applications if audio capture is permitted
 
 	public var allowBackgroundAudio              = true
 
@@ -265,7 +272,7 @@ open class SwiftyCamViewController: UIViewController {
 		super.viewDidLoad()
         coreMotionManager = CMMotionManager()
         coreMotionManager.accelerometerUpdateInterval = 0.1
-		previewLayer = PreviewView(frame: self.view.frame)
+        previewLayer = PreviewView(frame: self.view.frame, videoGravity: videoGravity)
 
 		// Add Gesture Recognizers
 
@@ -311,13 +318,19 @@ open class SwiftyCamViewController: UIViewController {
 
     override open func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        start()
+        if automaticallyStartsPreview { start() }
     }
     
 	override open func viewDidDisappear(_ animated: Bool) {
 		super.viewDidDisappear(animated)
         suspend()
 	}
+
+    override open func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        previewLayer.frame = view.frame
+        previewLayer.setNeedsLayout()
+    }
     
     fileprivate func addBlurView() {
         guard isViewLoaded, previewBlur.superview == nil else { return }
@@ -537,7 +550,7 @@ open class SwiftyCamViewController: UIViewController {
 
 	// MARK: Private Functions
     
-    fileprivate func start() {
+    func start() {
     
         shouldBeActive = true
 
