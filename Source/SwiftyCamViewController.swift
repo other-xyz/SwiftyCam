@@ -547,10 +547,8 @@ open class SwiftyCamViewController: UIViewController {
             print("[SwiftyCam]: Error locking configuration")
         }
     }
-
-	// MARK: Private Functions
     
-    func start() {
+    public func start() {
     
         shouldBeActive = true
 
@@ -585,6 +583,8 @@ open class SwiftyCamViewController: UIViewController {
             }
         }
     }
+        
+    // MARK: Private Functions
     
     fileprivate func suspend(withTimeout timeout: Int = 5) {
         
