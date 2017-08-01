@@ -306,6 +306,7 @@ open class SwiftyCamViewController: UIViewController {
 			// already been asked. Denied access
 			setupResult = .notAuthorized
 		}
+        
 		sessionQueue.async { [unowned self] in
             self.previewLayer.session = self.session
 			self.configureSession()
@@ -396,9 +397,17 @@ open class SwiftyCamViewController: UIViewController {
 	*/
 
 	public func startVideoRecording() {
-		guard let movieFileOutput = self.movieFileOutput else { return }
         
+		guard let movieFileOutput = self.movieFileOutput else { return }
         guard !isVideoRecording else { return }
+
+        guard isSessionRunning else {
+            start()
+            sessionQueue.async {
+                DispatchQueue.main.async { self.startVideoRecording() }
+            }
+            return
+        }
         
         isVideoRecording = true
 
