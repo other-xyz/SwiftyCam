@@ -307,12 +307,11 @@ open class SwiftyCamViewController: UIViewController {
 			setupResult = .notAuthorized
 		}
         
+        let layer = self.previewLayer.videoPreviewLayer
+        
 		sessionQueue.async { [unowned self] in
-			self.configureSession()
-            
-            DispatchQueue.main.async {
-                self.previewLayer.session = self.session
-            }
+            self.configureSession()
+            layer.session = self.session
 		}
 	}
 
