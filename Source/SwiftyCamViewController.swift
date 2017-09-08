@@ -308,8 +308,11 @@ open class SwiftyCamViewController: UIViewController {
 		}
         
 		sessionQueue.async { [unowned self] in
-            self.previewLayer.session = self.session
 			self.configureSession()
+            
+            DispatchQueue.main.async {
+                self.previewLayer.session = self.session
+            }
 		}
 	}
 
@@ -603,7 +606,9 @@ open class SwiftyCamViewController: UIViewController {
         
         sessionQueue.asyncAfter(deadline: DispatchTime.now() + .seconds(timeout)) {
             guard !self.shouldBeActive && self.suspendUntil <= Date() else { return }
-            self.stop()
+            DispatchQueue.main.async {
+                self.stop()
+            }
         }
     }
     
@@ -619,11 +624,13 @@ open class SwiftyCamViewController: UIViewController {
 
         // If session is running, stop the session
         if isSessionRunning == true {
-            session.stopRunning()
-            isSessionRunning = false
+            sessionQueue.async {
+                self.session.stopRunning()
+                self.isSessionRunning = false
+            }
         }
         
-        //Disble flash if it is currently enabled
+        // Disable flash if it is currently enabled
         disableFlash()
         
         // Unsubscribe from device rotation notifications
@@ -886,12 +893,16 @@ open class SwiftyCamViewController: UIViewController {
 	}
 
 	fileprivate func capturePhotoAsyncronously(completionHandler: @escaping(Bool) -> ()) {
+        
 		if let videoConnection = photoFileOutput?.connection(withMediaType: AVMediaTypeVideo) {
 
 			photoFileOutput?.captureStillImageAsynchronously(from: videoConnection, completionHandler: {(sampleBuffer, error) in
-				if (sampleBuffer != nil) {
-					let imageData = AVCaptureStillImageOutput.jpegStillImageNSDataRepresentation(sampleBuffer)
-					let image = self.processPhoto(imageData!)
+                
+                if let sampleBuffer = sampleBuffer,
+                    let imageData = AVCapturePhotoOutput.jpegPhotoDataRepresentation(forJPEGSampleBuffer: sampleBuffer,
+                                                                                     previewPhotoSampleBuffer: nil) {
+					
+					let image = self.processPhoto(imageData)
 
 					// Call delegate and return new image
 					DispatchQueue.main.async {
