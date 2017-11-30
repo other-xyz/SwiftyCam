@@ -167,9 +167,9 @@ open class SwiftyCamViewController: UIViewController {
 
 	private(set) public var isVideoRecording      = false
 
-	/// Returns true if the capture session is currently running
+	/// Returns true if the capture session was started
 
-	private(set) public var isSessionRunning     = false
+	private(set) public var didStartSession     = false
 
 	/// Returns the CameraSelection corresponding to the currently utilized camera
 
@@ -180,7 +180,7 @@ open class SwiftyCamViewController: UIViewController {
 	/// Current Capture Session
 
 	fileprivate let session                      = AVCaptureSession()
-
+    
 	/// Serial queue used for setting up session
 
 	fileprivate let sessionQueue                 = DispatchQueue(label: "session queue", attributes: [])
@@ -259,7 +259,6 @@ open class SwiftyCamViewController: UIViewController {
 
 	/// Disable view autorotation for forced portrait recorindg
 
-
 	override open var shouldAutorotate: Bool {
 		return false
 	}
@@ -295,11 +294,12 @@ open class SwiftyCamViewController: UIViewController {
 
 			// not yet determined
 			sessionQueue.suspend()
-			AVCaptureDevice.requestAccess(forMediaType: AVMediaTypeVideo, completionHandler: { [unowned self] granted in
+			AVCaptureDevice.requestAccess(forMediaType: AVMediaTypeVideo, completionHandler: { [weak self] granted in
+                guard let sself = self else { return }
 				if !granted {
-					self.setupResult = .notAuthorized
+					sself.setupResult = .notAuthorized
 				}
-				self.sessionQueue.resume()
+				sself.sessionQueue.resume()
 			})
 		default:
 
@@ -309,9 +309,10 @@ open class SwiftyCamViewController: UIViewController {
         
         let layer = self.previewLayer.videoPreviewLayer
         
-		sessionQueue.async { [unowned self] in
-            self.configureSession()
-            layer.session = self.session
+		sessionQueue.async { [weak self] in
+            guard let sself = self else { return }
+            sself.configureSession()
+            layer.session = sself.session
 		}
 	}
 
@@ -359,6 +360,8 @@ open class SwiftyCamViewController: UIViewController {
 		guard let device = videoDevice else {
 			return
 		}
+        
+        guard session.isRunning else { return }
 
 		if device.hasFlash == true && flashEnabled == true /* TODO: Add Support for Retina Flash and add front flash */ {
 			changeFlashSettings(device: device, mode: .on)
@@ -383,7 +386,7 @@ open class SwiftyCamViewController: UIViewController {
 				})
 			})
 		} else {
-			if device.isFlashActive == true {
+			if device.isFlashActive {
 				changeFlashSettings(device: device, mode: .off)
 			}
 			capturePhotoAsyncronously(completionHandler: { (_) in })
@@ -400,13 +403,15 @@ open class SwiftyCamViewController: UIViewController {
 
 	public func startVideoRecording() {
         
-        guard isSessionRunning else {
+        var didStartSession: Bool = false
+        sessionQueue.sync { didStartSession = self.didStartSession }
+        
+        guard didStartSession else {
             start()
             return
         }
 
-		guard let movieFileOutput = self.movieFileOutput,
-            !isVideoRecording else { return }
+		guard let movieFileOutput = self.movieFileOutput, !isVideoRecording else { return }
         
         isVideoRecording = true
 
@@ -421,30 +426,32 @@ open class SwiftyCamViewController: UIViewController {
 			previewLayer.addSubview(flashView!)
 		}
 
-		sessionQueue.async { [unowned self] in
+		sessionQueue.async { [weak self] in
+            guard let sself = self else { return }
+            guard sself.session.isRunning else { return }
             
 			if !movieFileOutput.isRecording {
 				if UIDevice.current.isMultitaskingSupported {
-					self.backgroundRecordingID = UIApplication.shared.beginBackgroundTask(expirationHandler: nil)
+					sself.backgroundRecordingID = UIApplication.shared.beginBackgroundTask(expirationHandler: nil)
 				}
 
 				// Update the orientation on the movie file output video connection before starting recording.
-				let movieFileOutputConnection = self.movieFileOutput?.connection(withMediaType: AVMediaTypeVideo)
+				let movieFileOutputConnection = sself.movieFileOutput?.connection(withMediaType: AVMediaTypeVideo)
 
 
 				//flip video output if front facing camera is selected
-				if self.currentCamera == .front {
+				if sself.currentCamera == .front {
 					movieFileOutputConnection?.isVideoMirrored = true
 				}
 
-				movieFileOutputConnection?.videoOrientation = self.getVideoOrientation()
+				movieFileOutputConnection?.videoOrientation = sself.getVideoOrientation()
 
 				// Start recording to a temporary file.
 				let outputFileName = UUID().uuidString
 				let outputFilePath = (NSTemporaryDirectory() as NSString).appendingPathComponent((outputFileName as NSString).appendingPathExtension("mov")!)
-				movieFileOutput.startRecording(toOutputFileURL: URL(fileURLWithPath: outputFilePath), recordingDelegate: self)
+				movieFileOutput.startRecording(toOutputFileURL: URL(fileURLWithPath: outputFilePath), recordingDelegate: sself)
 				DispatchQueue.main.async {
-					self.cameraDelegate?.swiftyCam(self, didBeginRecordingVideo: self.currentCamera)
+					sself.cameraDelegate?.swiftyCam(sself, didBeginRecordingVideo: sself.currentCamera)
 				}
 			}
 			else {
@@ -499,29 +506,30 @@ open class SwiftyCamViewController: UIViewController {
 			return
 		}
         
-		sessionQueue.async { [unowned self] in
-
-            switch self.currentCamera {
+		sessionQueue.async { [weak self] in
+            guard let sself = self else { return }
+            
+            switch sself.currentCamera {
             case .front:
-                self.currentCamera = .rear
+                sself.currentCamera = .rear
             case .rear:
-                self.currentCamera = .front
+                sself.currentCamera = .front
             }
 
-            self.session.stopRunning()
+            sself.session.stopRunning()
 
 			// remove and re-add inputs and outputs
 
-			for input in self.session.inputs {
-				self.session.removeInput(input as! AVCaptureInput)
+			for input in sself.session.inputs {
+				sself.session.removeInput(input as! AVCaptureInput)
 			}
 
-			self.addInputs()
+			sself.addInputs()
 			DispatchQueue.main.async {
-				self.cameraDelegate?.swiftyCam(self, didSwitchCameras: self.currentCamera)
+				sself.cameraDelegate?.swiftyCam(sself, didSwitchCameras: sself.currentCamera)
 			}
 
-			self.session.startRunning()
+			sself.session.startRunning()
 		}
 
 		// If flash is enabled, disable it as the torch is needed for front facing camera
@@ -581,7 +589,7 @@ open class SwiftyCamViewController: UIViewController {
             case .success:
                 // Begin Session
                 self.session.startRunning()
-                self.isSessionRunning = true
+                self.didStartSession = true
             case .notAuthorized:
                 // Prompt to App Settings
                 self.promptToAppSettings()
@@ -619,11 +627,10 @@ open class SwiftyCamViewController: UIViewController {
         }
 
         // If session is running, stop the session
-        if isSessionRunning == true {
-            sessionQueue.async {
-                self.session.stopRunning()
-                self.isSessionRunning = false
-            }
+        sessionQueue.async {
+            guard self.didStartSession else { return }
+            self.session.stopRunning()
+            self.didStartSession = false
         }
         
         // Disable flash if it is currently enabled
@@ -919,7 +926,8 @@ open class SwiftyCamViewController: UIViewController {
 	fileprivate func promptToAppSettings() {
 		// prompt User with UIAlertView
 
-		DispatchQueue.main.async(execute: { [unowned self] in
+		DispatchQueue.main.async(execute: { [weak self] in
+            guard let sself = self else { return }
 			let message = NSLocalizedString("AVCam doesn't have permission to use the camera, please change privacy settings", comment: "Alert message when the user has denied access to the camera")
 			let alertController = UIAlertController(title: "AVCam", message: message, preferredStyle: .alert)
 			alertController.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Alert OK button"), style: .cancel, handler: nil))
@@ -932,7 +940,7 @@ open class SwiftyCamViewController: UIViewController {
 					}
 				}
 			}))
-			self.present(alertController, animated: true, completion: nil)
+			sself.present(alertController, animated: true, completion: nil)
 		})
 	}
 
