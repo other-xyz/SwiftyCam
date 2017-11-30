@@ -400,16 +400,13 @@ open class SwiftyCamViewController: UIViewController {
 
 	public func startVideoRecording() {
         
-		guard let movieFileOutput = self.movieFileOutput else { return }
-        guard !isVideoRecording else { return }
-
         guard isSessionRunning else {
             start()
-            sessionQueue.async {
-                DispatchQueue.main.async { self.startVideoRecording() }
-            }
             return
         }
+
+		guard let movieFileOutput = self.movieFileOutput,
+            !isVideoRecording else { return }
         
         isVideoRecording = true
 
@@ -584,7 +581,7 @@ open class SwiftyCamViewController: UIViewController {
             case .success:
                 // Begin Session
                 self.session.startRunning()
-                self.isSessionRunning = self.session.isRunning
+                self.isSessionRunning = true
             case .notAuthorized:
                 // Prompt to App Settings
                 self.promptToAppSettings()
